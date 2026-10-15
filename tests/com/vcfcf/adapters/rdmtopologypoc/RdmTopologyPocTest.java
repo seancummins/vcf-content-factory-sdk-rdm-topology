@@ -3,6 +3,7 @@ package com.vcfcf.adapters.rdmtopologypoc;
 import com.integrien.alive.common.adapter3.Relationships;
 import com.integrien.alive.common.adapter3.ResourceKey;
 import com.integrien.alive.common.adapter3.config.ResourceIdentifierConfig;
+import com.integrien.alive.common.adapter3.describe.ResourceIdentifierDescribe;
 
 import java.io.File;
 import java.util.List;
@@ -26,7 +27,8 @@ public final class RdmTopologyPocTest {
         createsCorrectLocalMappingIdentity();
         neverMutatesVmwareTopology();
         declaresCredentialFreeAdapterInstance();
-        System.out.println("RdmTopologyPocTest: PASS (7 tests)");
+        RuntimeFixtureTest.run();
+        System.out.println("RdmTopologyPocTest: PASS (7 topology tests + runtime fixture matrix)");
     }
 
     private static void preservesForeignVmIdentifierFlags() {
@@ -129,6 +131,24 @@ public final class RdmTopologyPocTest {
                             "no credential kind reference");
                     check("false".equals(resourceKind.getAttribute("isCredentialRequired")),
                             "credential-free instance declaration");
+                    NodeList settings = resourceKind.getElementsByTagNameNS(
+                            "http://schemas.vmware.com/vcops/schema", "ResourceIdentifier");
+                    check(settings.getLength() == 1, "one ordinary fixture setting");
+                    Element declaration = (Element) settings.item(0);
+                    check("fixture_json".equals(declaration.getAttribute("key"))
+                            && "string".equals(declaration.getAttribute("type"))
+                            && "2".equals(declaration.getAttribute("identType"))
+                            && "true".equals(declaration.getAttribute("required")),
+                            "non-identifying required string configuration");
+                    try {
+                        Class.forName("org.apache.logging.log4j.LogManager");
+                        ResourceIdentifierDescribe setting = new ResourceIdentifierDescribe();
+                        check(setting.load(settings.item(0)), "actual SDK descriptor loader accepts fixture setting");
+                        check("string".equals(setting.getType()) && Integer.valueOf(2).equals(setting.getIdentType())
+                                && setting.isRequired(), "SDK configuration contract");
+                    } catch (ClassNotFoundException unavailable) {
+                        System.out.println("SKIP: SDK descriptor load requires unavailable log4j-api; DOM contract checked");
+                    }
                     return;
                 }
             }

@@ -1,0 +1,46 @@
+name: protected-release-candidate
+on:
+  push:
+    tags: ['v[1-9]*']
+permissions:
+  contents: read
+concurrency:
+  group: rdm-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  candidate:
+    if: >-
+      github.repository == 'seancummins/vcf-content-factory-sdk-rdm-topology' &&
+      github.event_name == 'push' && github.ref_type == 'tag' &&
+      github.ref_protected == true && vars.RDM_RELEASE_ENABLED == 'true'
+    environment: rdm-release
+    runs-on:
+      group: rdm-protected-release
+      labels: [self-hosted, linux, x64, rdm-release-ephemeral]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          clean: true
+      - name: Require approved main ancestry
+        run: git merge-base --is-ancestor HEAD refs/remotes/origin/main
+      - name: Build and verify candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VCFCF_SDK_JAR: ${{ vars.RDM_SDK_JAR_PATH }}
+          RDM_RUNNER_APPROVED: ${{ vars.RDM_RUNNER_APPROVED }}
+          RDM_APPROVED_SOURCE_SHA: ${{ vars.RDM_APPROVED_SOURCE_SHA }}
+        run: python3 ci/release.py
+      - name: Store only verified candidate evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: rdm-release-candidate-${{ github.ref_name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            release-output/vcfcf_sdk_rdm_topology_poc.*.pak
+            release-output/vcfcf_sdk_rdm_topology_poc.*.pak.sha256
+            release-output/provenance.json
+            release-output/comparison.txt

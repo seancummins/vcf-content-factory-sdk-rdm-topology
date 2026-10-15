@@ -2,3 +2,17 @@
 build/
 dist/
 *.pak
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+*.jar
+*.sha256
+tmp/
+scratch/
+reports/
+release-output/
+.idea/
+.vscode/
+*.log

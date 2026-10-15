@@ -1,0 +1,22 @@
+name: check-source
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Deterministic no-SDK checks
+        run: python3 -m unittest discover -s ci/tests -v
+      - name: Shell syntax
+        run: bash -n scripts/run-tests.sh

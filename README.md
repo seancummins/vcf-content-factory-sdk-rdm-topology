@@ -26,3 +26,7 @@ VCFCF_SDK_JAR=/home/scummins/Documents/vmware-sdk/vrops-adapters-sdk-2.2.jar \
 
 Compilation and a PAK build do not prove that Operations will retain or render
 the foreign edge. A separately approved deployment experiment is required.
+
+Protected CI candidate preparation, approval pins and external controls are
+documented in [ci/README.md](ci/README.md). Release automation remains disabled
+pending the listed administrator and release-owner approvals.

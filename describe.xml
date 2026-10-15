@@ -8,7 +8,7 @@
   <ResourceKinds>
     <!-- Fixture-only adapter instance. It has no endpoint or credentials. -->
     <ResourceKind key="vcfcf_rdm_topology_poc" nameKey="2" type="7"
-                  monitoringInterval="5"/>
+                  isCredentialRequired="false" monitoringInterval="5"/>
 
     <!-- Identity is deliberately limited to the stable RDM tuple. -->
     <ResourceKind key="RdmMapping" nameKey="10" type="1">

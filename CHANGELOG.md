@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0.4
+
+- fix(test): assert the descriptor omits the CredentialKinds container.
+
+## 0.1.0.3
+
+- fix(adapter): explicitly mark the fixture-only adapter instance as credential-free.
+
 ## 0.1.0.2
 
 - fix(adapter): document fixture-only operation and the explicit deployment gate.

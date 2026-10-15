@@ -4,7 +4,14 @@ import com.integrien.alive.common.adapter3.Relationships;
 import com.integrien.alive.common.adapter3.ResourceKey;
 import com.integrien.alive.common.adapter3.config.ResourceIdentifierConfig;
 
+import java.io.File;
 import java.util.List;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 /** Dependency-free focused tests; run with scripts/run-tests.sh. */
 public final class RdmTopologyPocTest {
@@ -18,7 +25,8 @@ public final class RdmTopologyPocTest {
         rejectsUnresolvedForeignVm();
         createsCorrectLocalMappingIdentity();
         neverMutatesVmwareTopology();
-        System.out.println("RdmTopologyPocTest: PASS (6 tests)");
+        declaresCredentialFreeAdapterInstance();
+        System.out.println("RdmTopologyPocTest: PASS (7 tests)");
     }
 
     private static void preservesForeignVmIdentifierFlags() {
@@ -95,6 +103,51 @@ public final class RdmTopologyPocTest {
         ResourceKey child = edge.getChildren().iterator().next();
         check(RdmTopologyPocAdapter.ADAPTER_KIND.equals(child.getAdapterKind()),
                 "child is pack-owned, not VMWARE-owned");
+    }
+
+    private static void declaresCredentialFreeAdapterInstance() {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document document = factory.newDocumentBuilder().parse(describeXml());
+            NodeList credentialKindContainers = document.getElementsByTagNameNS(
+                    "http://schemas.vmware.com/vcops/schema", "CredentialKinds");
+            check(credentialKindContainers.getLength() == 0,
+                    "no credential kinds container declared");
+            NodeList credentialKinds = document.getElementsByTagNameNS(
+                    "http://schemas.vmware.com/vcops/schema", "CredentialKind");
+            check(credentialKinds.getLength() == 0, "no credential kinds declared");
+
+            NodeList resourceKinds = document.getElementsByTagNameNS(
+                    "http://schemas.vmware.com/vcops/schema", "ResourceKind");
+            for (int index = 0; index < resourceKinds.getLength(); index++) {
+                Element resourceKind = (Element) resourceKinds.item(index);
+                if (RdmTopologyPocAdapter.ADAPTER_KIND.equals(resourceKind.getAttribute("key"))) {
+                    check("7".equals(resourceKind.getAttribute("type")),
+                            "adapter instance resource kind");
+                    check(!resourceKind.hasAttribute("credentialKind"),
+                            "no credential kind reference");
+                    check("false".equals(resourceKind.getAttribute("isCredentialRequired")),
+                            "credential-free instance declaration");
+                    return;
+                }
+            }
+            throw new AssertionError("missing adapter instance resource kind");
+        } catch (Exception error) {
+            throw new AssertionError("cannot parse describe.xml", error);
+        }
+    }
+
+    private static File describeXml() {
+        File local = new File("describe.xml");
+        if (local.isFile()) {
+            return local;
+        }
+        File factoryRoot = new File("content/sdk-adapters/rdm-topology-poc/describe.xml");
+        if (factoryRoot.isFile()) {
+            return factoryRoot;
+        }
+        throw new AssertionError("describe.xml is not available from the test working directory");
     }
 
     private static ForeignVmIdentity fixtureVm(String moid, String vcenterId) {

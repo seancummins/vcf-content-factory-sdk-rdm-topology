@@ -1,6 +1,6 @@
 # VCF Content Factory RDM Topology POC — Reference
 
-Generated from `describe.xml` and `resources.properties` for build 0.0.0.2.
+Generated from `describe.xml` and `resources.properties` for build 0.0.0.4.
 
 ## Adapter
 

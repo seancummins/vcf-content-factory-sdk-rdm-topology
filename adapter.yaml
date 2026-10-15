@@ -1,0 +1,21 @@
+name: "VCF Content Factory RDM Topology POC"
+version: "0.1.0"
+build_number: 2
+adapter_kind: "vcfcf_rdm_topology_poc"
+tier: 2
+description: >
+  Fixture-only proof of the VCF Operations Java SDK mechanics for an additive
+  relationship from an existing VMWARE VirtualMachine to a pack-owned
+  RdmMapping resource. This POC has no live vCenter or VCF Operations API
+  collection, no CanonicalLun resource, and no production lifecycle behavior.
+entry_class: "com.vcfcf.adapters.rdmtopologypoc.RdmTopologyPocAdapter"
+released: false
+cross_mp_edges:
+  - parent: "VMWARE VirtualMachine"
+    child: "RdmMapping"
+    direction: parent_foreign
+    foreign_adapter_kind: "VMWARE"
+    description: >
+      Fixture-only additive relationship. The foreign VM ResourceKey preserves
+      the Suite API-derived identifier names, values, and uniqueness flags;
+      the POC does not create or modify VMWARE resources.

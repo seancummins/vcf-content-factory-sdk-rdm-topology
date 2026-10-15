@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0.6
+
+- fix(adapter): preserve explicitly empty nonunique ResourceKey values supported by the SDK, while rejecting null, omitted and ambiguous entries.
+
 ## 0.1.0.5
 
 - feat(adapter): bind a strictly validated lab fixture through persisted, credential-free instance configuration.

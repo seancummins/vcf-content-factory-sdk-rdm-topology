@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.Set;
 
 /**
@@ -30,7 +30,8 @@ public final class ForeignVmIdentity {
 
         public Identifier(String name, String value, boolean partOfUniqueness) {
             this.name = require("identifier name", name);
-            this.value = require("identifier value", value);
+            this.value = !partOfUniqueness && "".equals(value)
+                    ? value : require("identifier value", value);
             this.partOfUniqueness = partOfUniqueness;
         }
 
@@ -46,7 +47,8 @@ public final class ForeignVmIdentity {
             throw new IllegalArgumentException("Suite API identifiers are required");
         }
         this.identifiers = Collections.unmodifiableList(new ArrayList<>(identifiers));
-        Set<String> names = new HashSet<>();
+        // SDK ResourceKey rejects case-insensitive duplicate names.
+        Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Identifier identifier : this.identifiers) {
             if (identifier == null || !names.add(identifier.name())) {
                 throw new IllegalArgumentException("Duplicate or null foreign identifier");
@@ -60,8 +62,10 @@ public final class ForeignVmIdentity {
         ResourceKey key = new ResourceKey(require("displayName", displayName),
                 RESOURCE_KIND, ADAPTER_KIND);
         for (Identifier identifier : identifiers) {
-            key.addIdentifier(new ResourceIdentifierConfig(identifier.name(),
-                    identifier.value(), identifier.partOfUniqueness()));
+            if (!key.addIdentifier(new ResourceIdentifierConfig(identifier.name(),
+                    identifier.value(), identifier.partOfUniqueness()))) {
+                throw new IllegalArgumentException("Foreign identifier cannot be preserved by SDK");
+            }
         }
         return key;
     }

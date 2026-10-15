@@ -22,6 +22,16 @@ canonical positive 32-bit virtual-disk key encoded as a string. An optional
 `VMEntityInstanceUUID` identifier must agree with the mapping. Do not drop
 additional native identifiers or use names as identity evidence.
 
+Every identifier must retain an explicit string `value`. An exactly empty
+string is supported only with `isPartOfUniqueness: false`; it remains empty,
+not omitted or replaced. Null, omitted and whitespace-only values are rejected.
+All uniqueness-bearing values remain nonblank. Names must be distinct even
+ignoring case because the SDK would reject a colliding entry. The fixture
+array preserves response order; the SDK ResourceKey itself sorts identifiers
+by name without changing their names, values or flags. SDK key matching ignores
+nonunique values, but that does not justify dropping their entries or coercing
+null/absence to empty: ResourceKey refuses null-valued entries.
+
 Only one VM and one mapping are supported. The parser rejects unknown fields,
 duplicate keys/identifier names, missing flags, invalid/coerced values,
 conflicting scope and malformed JSON. Limits: 32,768 input characters, 4,096

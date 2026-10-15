@@ -36,12 +36,15 @@ final class RuntimeFixture {
                 Map<String, Object> type = object(id.get("identifierType"),
                         "name", "isPartOfUniqueness");
                 String key = string(type.get("name"));
-                String value = string(id.get("value"));
                 require(type.get("isPartOfUniqueness") instanceof Boolean);
+                boolean unique = (Boolean) type.get("isPartOfUniqueness");
+                // The SDK retains exactly empty strings, but drops null values.
+                // Only nonidentity values may be empty; never coerce absence/null.
+                String value = string(id.get("value"), !unique);
                 require(!values.containsKey(key));
                 values.put(key, value);
                 identifiers.add(new ForeignVmIdentity.Identifier(key, value,
-                        (Boolean) type.get("isPartOfUniqueness")));
+                        unique));
             }
             ForeignVmIdentity vm = new ForeignVmIdentity(identifiers);
             require(string(values.get(ForeignVmIdentity.VM_MOID)).matches("vm-[1-9][0-9]{0,18}"));
@@ -74,9 +77,13 @@ final class RuntimeFixture {
     }
 
     private static String string(Object value) {
+        return string(value, false);
+    }
+
+    private static String string(Object value, boolean allowEmpty) {
         require(value instanceof String);
         String result = (String) value;
-        require(!result.isBlank() && result.length() <= 4096);
+        require((allowEmpty && result.isEmpty() || !result.isBlank()) && result.length() <= 4096);
         for (int i = 0; i < result.length(); i++) {
             char current = result.charAt(i);
             require(!Character.isISOControl(current));

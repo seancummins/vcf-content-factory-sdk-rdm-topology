@@ -24,6 +24,7 @@ final class RuntimeFixtureTest {
             + "\"vm_instance_uuid\":\"" + VM + "\",\"virtual_disk_key\":\"2000\"}}";
 
     static void run() {
+        sdkIdentifierValueContract();
         List<String> invalid = new ArrayList<>();
         invalid.add(null); invalid.add(""); invalid.add("{}"); invalid.add("[]");
         invalid.add(JSON + " trailing"); invalid.add(JSON.substring(0, JSON.length()-1));
@@ -43,12 +44,20 @@ final class RuntimeFixtureTest {
         }
         invalid.add(JSON.replace("\"vcenter_instance_uuid\":\"" + VC, "\"vcenter_instance_uuid\":\"" + VM));
         invalid.add(JSON.replace("VMEntityName", "VMEntityVCID"));
+        invalid.add(JSON.replace("VMEntityName", "vmentityvcid"));
         invalid.add(JSON.replace("VMEntityName", "VMEntityInstanceUUID"));
         invalid.add(JSON.replace("VMEntityName", "VMEntityInstanceUUID").replace(" same name ", VC));
         invalid.add(JSON.replace(VC, "00000000-0000-0000-0000-000000000000"));
         invalid.add(JSON.replace(" same name ", "bad\\nvalue"));
         invalid.add(JSON.replace(" same name ", "bad\\uD800"));
         invalid.add(JSON.replace(" same name ", "bad\\x00"));
+        // Empty is not null, absence, whitespace, or an identity-bearing value.
+        invalid.add(JSON.replace("\"value\":\" same name \"", "\"value\":null"));
+        invalid.add(JSON.replace(",\"value\":\" same name \"", ""));
+        invalid.add(JSON.replace(" same name ", " "));
+        invalid.add(JSON.replace(" same name ", "").replace("\"isPartOfUniqueness\":false", "\"isPartOfUniqueness\":true"));
+        invalid.add(JSON.replace("\"value\":\"vm-71\"", "\"value\":\"\""));
+        invalid.add(JSON.replace("\"value\":\"" + VC + "\"", "\"value\":\"\""));
         invalid.add("[".repeat(20) + "true" + "]".repeat(20));
         invalid.add(" ".repeat(32769));
         invalid.add(JSON.replace("\"mapping\":", "\"extra\":false,\"mapping\":"));
@@ -97,7 +106,69 @@ final class RuntimeFixtureTest {
         identifying.addResourceIdentifier(new ResourceIdentifierConfig("fixture_json", JSON, true));
         rejects(() -> adapter.onConfigure(null, identifying));
         runtimeHasNoNodeLocalInputs();
+        preservesSixIdentifierEmptyValues();
         System.out.println("RuntimeFixtureTest: PASS (" + invalid.size() + " invalid-input lifecycle cases + valid/idempotent/reconfiguration guards)");
+    }
+
+    private static void preservesSixIdentifierEmptyValues() {
+        String extra = ",{\"identifierType\":{\"name\":\"zEmpty\",\"isPartOfUniqueness\":false},\"value\":\"\"}"
+                + ",{\"identifierType\":{\"name\":\"aEmpty\",\"isPartOfUniqueness\":false},\"value\":\"\"}"
+                + ",{\"identifierType\":{\"name\":\"OtherIdentity\",\"isPartOfUniqueness\":true},\"value\":\"exact other identity\"}";
+        String input = JSON.replace("}]},\"mapping\"", "}" + extra + "]},\"mapping\"");
+        RdmTopologyPocAdapter adapter = offlineAdapter();
+        adapter.onConfigure(null, account(input));
+        RuntimeFixture fixture = current(adapter);
+        check(fixture.vm.identifiers().size() == 6, "six identifiers retained");
+        check(fixture.vm.identifiers().get(3).name().equals("zEmpty")
+                && fixture.vm.identifiers().get(4).name().equals("aEmpty"), "fixture input order retained");
+        List<ResourceConfig> resources = new ArrayList<>(); adapter.enumerateResources(resources::add);
+        check(resources.size() == 1, "one mapping with empty nonidentity values");
+        Relationships.RelationshipItem first = adapter.getCollector().collectRelationships(fixture, resources.get(0))
+                .getRelationshipItems().iterator().next();
+        check(first.getParent().getIdentifiers().size() == 6, "complete foreign ResourceKey retained");
+        for (ForeignVmIdentity.Identifier source : fixture.vm.identifiers()) {
+            ResourceIdentifierConfig target = first.getParent().getIdentifiers().stream()
+                    .filter(id -> id.getKey().equals(source.name())).findFirst().orElseThrow();
+            check(source.value().equals(target.getValue())
+                    && source.partOfUniqueness() == target.isPartOfUniqueness(), "exact field roundtrip");
+        }
+        check(first.isAdd() && !first.isClearFirst(), "empty-value relationship remains additive");
+        adapter.onConfigure(null, account(input));
+        Relationships.RelationshipItem second = adapter.getCollector().collectRelationships(current(adapter), resources.get(0))
+                .getRelationshipItems().iterator().next();
+        check(first.getParent().equals(second.getParent()) && first.getChildren().equals(second.getChildren()),
+                "empty-value repeated collection stable");
+        for (String value : new String[] {null, "", " "}) {
+            rejects(() -> new ForeignVmIdentity.Identifier("OtherIdentity", value, true));
+        }
+        rejects(() -> new ForeignVmIdentity.Identifier("NonIdentity", null, false));
+        rejects(() -> new ForeignVmIdentity.Identifier("NonIdentity", " ", false));
+        System.out.println("Six-identifier empty-string exact roundtrip/repeated collection checks: PASS");
+    }
+
+    /** Exercise the actual supplied SDK, not a stub or inferred wire contract. */
+    private static void sdkIdentifierValueContract() {
+        ResourceIdentifierConfig nullEntry = new ResourceIdentifierConfig("null-entry", null, false);
+        check(nullEntry.getValue() == null, "identifier config stores null distinctly");
+        ResourceKey key = new ResourceKey("display", "VirtualMachine", "VMWARE");
+        check(!key.addIdentifier(nullEntry), "ResourceKey refuses null value");
+        check(key.getIdentifiers().isEmpty(), "null entry is not preserved by ResourceKey");
+        check(key.addIdentifier(new ResourceIdentifierConfig("zEmpty", "", false)), "empty nonunique accepted");
+        check(key.addIdentifier(new ResourceIdentifierConfig("aIdentity", "scope", true)), "unique value accepted");
+        check(key.getIdentifiers().size() == 2 && key.getIdentifiers().get(1).getValue().equals(""),
+                "empty entry retained exactly and SDK sorts identifiers");
+        check(key.getIdentifiers().get(0).getKey().equals("aIdentity"), "SDK orders names ignoring case");
+        check(!key.addIdentifier(new ResourceIdentifierConfig("ZEMPTY", "conflict", false)),
+                "SDK rejects case-insensitive duplicate names");
+        ResourceKey populated = new ResourceKey("other display", "VirtualMachine", "VMWARE");
+        populated.addIdentifier(new ResourceIdentifierConfig("aIdentity", "scope", true));
+        populated.addIdentifier(new ResourceIdentifierConfig("zEmpty", "populated", false));
+        check(key.equals(populated), "ResourceKey matching ignores nonunique value difference");
+        ResourceKey omitted = new ResourceKey("display", "VirtualMachine", "VMWARE");
+        omitted.addIdentifier(new ResourceIdentifierConfig("aIdentity", "scope", true));
+        check(key.equals(omitted), "matching ignores nonunique absence but representation differs");
+        check(key.getIdentifiers().size() != omitted.getIdentifiers().size(), "never infer representation equivalence");
+        System.out.println("Actual SDK identifier value/storage/order/matching checks: PASS");
     }
 
     private static void runtimeHasNoNodeLocalInputs() {

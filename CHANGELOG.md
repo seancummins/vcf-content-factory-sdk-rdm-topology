@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0.5
+
+- feat(adapter): bind a strictly validated lab fixture through persisted, credential-free instance configuration.
+
 ## 0.1.0.4
 
 - fix(test): assert the descriptor omits the CredentialKinds container.

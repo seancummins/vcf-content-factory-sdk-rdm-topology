@@ -15,6 +15,12 @@ The VM key preserves Suite API identifier names, values, and uniqueness flags.
 It requires `VMEntityObjectID` and `VMEntityVCID` to be marked unique, so a
 bare MOID or VM display name cannot form an edge.
 
+Build 5 replaces compiled runtime identities with the required ordinary
+adapter-instance setting `fixture_json` (string, nonunique `identType="2"`).
+There is no fallback fixture. Operations supplies this setting with the
+instance configuration; no collector-node files or environment variables are
+read by the adapter. See [configuration and limitations](docs/installing.md).
+
 Local validation (the SDK JAR stays outside this repository):
 
 ```bash

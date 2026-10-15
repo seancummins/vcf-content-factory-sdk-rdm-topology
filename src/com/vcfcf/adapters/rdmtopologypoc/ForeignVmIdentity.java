@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * An existing Operations VM resource key reconstructed from a Suite API
@@ -44,6 +46,12 @@ public final class ForeignVmIdentity {
             throw new IllegalArgumentException("Suite API identifiers are required");
         }
         this.identifiers = Collections.unmodifiableList(new ArrayList<>(identifiers));
+        Set<String> names = new HashSet<>();
+        for (Identifier identifier : this.identifiers) {
+            if (identifier == null || !names.add(identifier.name())) {
+                throw new IllegalArgumentException("Duplicate or null foreign identifier");
+            }
+        }
         requireUnique(VM_MOID);
         requireUnique(VCENTER_INSTANCE_UUID);
     }
@@ -77,6 +85,11 @@ public final class ForeignVmIdentity {
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(field + " must be non-blank");
         }
-        return value.trim();
+        for (int i = 0; i < value.length(); i++) {
+            if (Character.isISOControl(value.charAt(i))) {
+                throw new IllegalArgumentException(field + " contains control characters");
+            }
+        }
+        return value;
     }
 }

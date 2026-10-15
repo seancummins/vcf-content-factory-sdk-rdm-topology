@@ -1,6 +1,6 @@
 # VCF Content Factory RDM Topology POC — Reference
 
-Generated from `describe.xml` and `resources.properties` for build 0.0.0.4.
+Generated from `describe.xml` and `resources.properties` for build 0.0.0.5.
 
 ## Adapter
 
@@ -10,6 +10,12 @@ Generated from `describe.xml` and `resources.properties` for build 0.0.0.4.
 | Tier | 2 (Java SDK) |
 | Monitoring Interval | 5 minutes |
 | License Required | No |
+
+### Connection Settings
+
+| Field | Key | Default | Required |
+|---|---|---|---|
+| Runtime Fixture JSON (lab only) | `fixture_json` | — | Yes |
 
 ---
 

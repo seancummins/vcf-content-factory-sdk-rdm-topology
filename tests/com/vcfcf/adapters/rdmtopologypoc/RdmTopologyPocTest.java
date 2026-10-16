@@ -4,9 +4,13 @@ import com.integrien.alive.common.adapter3.Relationships;
 import com.integrien.alive.common.adapter3.ResourceKey;
 import com.integrien.alive.common.adapter3.config.ResourceIdentifierConfig;
 import com.integrien.alive.common.adapter3.describe.ResourceIdentifierDescribe;
+import com.integrien.alive.common.adapter3.describe.ResourceAttributeDescribe;
+import com.integrien.alive.common.adapter3.describe.ResourceGroupDescribe;
 
 import java.io.File;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -20,6 +24,7 @@ public final class RdmTopologyPocTest {
     private RdmTopologyPocTest() { }
 
     public static void main(String[] args) {
+        System.out.println("Descriptor loader tests execute actual SDK with TEST-ONLY no-op logging linkage; not platform installation proof");
         preservesForeignVmIdentifierFlags();
         scopesSameMoidToOwningVcenter();
         repeatedCollectionIsPayloadIdempotent();
@@ -27,8 +32,10 @@ public final class RdmTopologyPocTest {
         createsCorrectLocalMappingIdentity();
         neverMutatesVmwareTopology();
         declaresCredentialFreeAdapterInstance();
+        declaresLegalCanonicalPropertyHierarchy();
         RuntimeFixtureTest.run();
-        System.out.println("RdmTopologyPocTest: PASS (7 topology tests + runtime fixture matrix)");
+        CanonicalLunTest.run();
+        System.out.println("RdmTopologyPocTest: PASS (8 topology/descriptor tests + runtime fixture matrix)");
     }
 
     private static void preservesForeignVmIdentifierFlags() {
@@ -114,11 +121,11 @@ public final class RdmTopologyPocTest {
             Document document = factory.newDocumentBuilder().parse(describeXml());
             NodeList credentialKindContainers = document.getElementsByTagNameNS(
                     "http://schemas.vmware.com/vcops/schema", "CredentialKinds");
-            check(credentialKindContainers.getLength() == 0,
-                    "no credential kinds container declared");
+            check(credentialKindContainers.getLength() == 1,
+                    "one optional diagnostic credential kinds container declared");
             NodeList credentialKinds = document.getElementsByTagNameNS(
                     "http://schemas.vmware.com/vcops/schema", "CredentialKind");
-            check(credentialKinds.getLength() == 0, "no credential kinds declared");
+            check(credentialKinds.getLength() == 1, "one diagnostic credential kind declared");
 
             NodeList resourceKinds = document.getElementsByTagNameNS(
                     "http://schemas.vmware.com/vcops/schema", "ResourceKind");
@@ -127,25 +134,25 @@ public final class RdmTopologyPocTest {
                 if (RdmTopologyPocAdapter.ADAPTER_KIND.equals(resourceKind.getAttribute("key"))) {
                     check("7".equals(resourceKind.getAttribute("type")),
                             "adapter instance resource kind");
-                    check(!resourceKind.hasAttribute("credentialKind"),
-                            "no credential kind reference");
+                    check("rdm_vcenter_readonly".equals(resourceKind.getAttribute("credentialKind")),
+                            "optional diagnostic credential kind reference");
                     check("false".equals(resourceKind.getAttribute("isCredentialRequired")),
                             "credential-free instance declaration");
                     NodeList settings = resourceKind.getElementsByTagNameNS(
                             "http://schemas.vmware.com/vcops/schema", "ResourceIdentifier");
-                    check(settings.getLength() == 1, "one ordinary fixture setting");
+                    check(settings.getLength() == 12, "union configuration settings");
                     Element declaration = (Element) settings.item(0);
                     check("fixture_json".equals(declaration.getAttribute("key"))
                             && "string".equals(declaration.getAttribute("type"))
                             && "2".equals(declaration.getAttribute("identType"))
-                            && "true".equals(declaration.getAttribute("required")),
-                            "non-identifying required string configuration");
+                            && "false".equals(declaration.getAttribute("required")),
+                            "non-identifying conditionally required string configuration");
                     try {
                         Class.forName("org.apache.logging.log4j.LogManager");
                         ResourceIdentifierDescribe setting = new ResourceIdentifierDescribe();
                         check(setting.load(settings.item(0)), "actual SDK descriptor loader accepts fixture setting");
                         check("string".equals(setting.getType()) && Integer.valueOf(2).equals(setting.getIdentType())
-                                && setting.isRequired(), "SDK configuration contract");
+                                && !setting.isRequired(), "SDK conditionally required configuration contract");
                     } catch (ClassNotFoundException unavailable) {
                         System.out.println("SKIP: SDK descriptor load requires unavailable log4j-api; DOM contract checked");
                     }
@@ -156,6 +163,73 @@ public final class RdmTopologyPocTest {
         } catch (Exception error) {
             throw new AssertionError("cannot parse describe.xml", error);
         }
+    }
+
+    private static void declaresLegalCanonicalPropertyHierarchy() {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document document = factory.newDocumentBuilder().parse(describeXml());
+            NodeList kinds = document.getElementsByTagNameNS("*", "ResourceKind");
+            Element lun = null;
+            for (int i = 0; i < kinds.getLength(); i++) {
+                Element kind = (Element) kinds.item(i);
+                if ("CanonicalLun".equals(kind.getAttribute("key"))) lun = kind;
+            }
+            check(lun != null, "CanonicalLun descriptor exists");
+            NodeList groups = lun.getElementsByTagNameNS("*", "ResourceGroup");
+            check(groups.getLength() == 2, "explicit identity and storage groups");
+            Set<String> paths = new HashSet<>();
+            for (int i = 0; i < groups.getLength(); i++) {
+                Element group = (Element) groups.item(i);
+                check(group.getParentNode() == lun && "false".equals(group.getAttribute("instanced")),
+                        "direct noninstanced group");
+                String prefix = group.getAttribute("key");
+                check(!prefix.contains("|") && !prefix.contains(":"), "legal SDK group key");
+                NodeList leaves = group.getElementsByTagNameNS("*", "ResourceAttribute");
+                for (int j = 0; j < leaves.getLength(); j++) {
+                    Element leaf = (Element) leaves.item(j);
+                    String key = leaf.getAttribute("key");
+                    check(!key.contains("|") && !key.contains(":"), "legal SDK attribute key");
+                    check("true".equals(leaf.getAttribute("isProperty")), "declared as property");
+                    check(paths.add(prefix + "|" + key), "unique full property path");
+                }
+                try {
+                    Class.forName("org.apache.logging.log4j.LogManager");
+                    ResourceGroupDescribe actual = new ResourceGroupDescribe();
+                    check(actual.load(group), "actual SDK loads group and all child attributes");
+                } catch (ClassNotFoundException unavailable) {
+                    System.out.println("SKIP: actual SDK group load needs log4j-api; DOM path parity checked");
+                }
+            }
+            check(paths.equals(Set.of("identity|format", "identity|canonical_name", "identity|provenance",
+                    "identity|assessment", "storage|vendor", "storage|model", "storage|revision",
+                    "storage|serial_number", "storage|lun_type", "storage|device_type", "storage|capacity_bytes")),
+                    "all eleven full emission paths unchanged");
+            String complete = CanonicalLunTest.LUN.replace("\"vendor\":", "\"revision\":\"synthetic\","
+                    + "\"serial_number\":\"synthetic\",\"lun_type\":\"disk\",\"device_type\":\"disk\",\"vendor\":");
+            RuntimeFixture fixture = RuntimeFixture.parse(CanonicalLunTest.v2(
+                    CanonicalLunTest.attachment(RuntimeFixtureTest.JSON, complete)));
+            check(paths.equals(fixture.lun.properties.keySet()), "descriptor full paths exactly match Java emissions");
+            try {
+                Class.forName("org.apache.logging.log4j.LogManager");
+                Element bad = document.createElementNS("http://schemas.vmware.com/vcops/schema", "ResourceAttribute");
+                bad.setAttribute("nameKey", "22"); bad.setAttribute("dataType", "string");
+                Set<String> invalidKeys = new HashSet<>(paths);
+                invalidKeys.add("identity:format");
+                for (String key : invalidKeys) {
+                    bad.setAttribute("key", key);
+                    check(!new ResourceAttributeDescribe().load(bad), "actual SDK rejects illegal individual attribute key");
+                }
+                Element badGroup = (Element) groups.item(0).cloneNode(true);
+                for (String key : List.of("identity|group", "identity:group")) {
+                    badGroup.setAttribute("key", key);
+                    check(!new ResourceGroupDescribe().load(badGroup), "actual SDK rejects illegal individual group key");
+                }
+            } catch (ClassNotFoundException unavailable) {
+                System.out.println("SKIP: actual SDK negative loader needs log4j-api; exact rule checked by factory tests");
+            }
+        } catch (Exception error) { throw new AssertionError("CanonicalLun descriptor/emission mismatch", error); }
     }
 
     private static File describeXml() {

@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.0.13
+
+- fix(adapter): accept SDK-expanded exact-empty mode only for a fully validated fixture without a target credential object/reference; preserve strict null/ambiguous diagnostic rejection and existing absent/exact-fixture policies.
+
+## 0.1.0.12
+
+- fix(adapter): preserve validated fixture configuration across matching SDK partial updates and report fixed, sanitized configuration rejection reasons without changing mode selection or diagnostic publication.
+
+## 0.1.0.11
+
+- fix(adapter): restore the collector's public (String, Integer) dispatcher constructor, retaining lazy SDK fixture initialization and binding collection to the supplied instance identity.
+
+## 0.1.0.10
+
+- feat(adapter): add an explicit same-kind, one-shot read-only diagnostic dispatcher with zero publication, retaining default fixture collection and optional credential-free fixture configuration.
+
+## 0.1.0.9
+
+- fix(adapter): declare CanonicalLun properties under identity/storage ResourceGroups with legal individual keys, preserving full emitted property keys and all resource/relationship identities.
+
+## 0.1.0.8
+
+- fix(adapter): reject conflicting foreign VM ownership of one vCenter-scoped VM instance identity across CanonicalLun attachments; supersedes intermediate development build 7.
+
+## 0.1.0.7
+
+- feat(adapter): add version-2 qualified NAA CanonicalLun fixtures and additive local mapping-to-LUN topology, preserving build-6 fixture compatibility.
+
 ## 0.1.0.6
 
 - fix(adapter): preserve explicitly empty nonunique ResourceKey values supported by the SDK, while rejecting null, omitted and ambiguous entries.

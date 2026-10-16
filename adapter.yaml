@@ -1,14 +1,16 @@
 name: "VCF Content Factory RDM Topology POC"
 version: "0.1.0"
-build_number: 6
+build_number: 13
 adapter_kind: "vcfcf_rdm_topology_poc"
 tier: 2
 description: >
-  Fixture-only proof of the VCF Operations Java SDK mechanics for an additive
+  Fixture-driven proof of the VCF Operations Java SDK mechanics for an additive
   relationship from an existing VMWARE VirtualMachine to a pack-owned
-  RdmMapping resource. This POC has no live vCenter or VCF Operations API
-  collection, no CanonicalLun resource, and no production lifecycle behavior.
-entry_class: "com.vcfcf.adapters.rdmtopologypoc.RdmTopologyPocAdapter"
+  RdmMapping resource. Optional version-2 fixtures add a qualified CanonicalLun
+  and additive local mapping-to-LUN edge. An explicitly selected, one-shot
+  read-only diagnostic uses native Java APIs without publishing topology.
+  Fixture mode remains the default; no automatic production collector.
+entry_class: "com.vcfcf.adapters.rdmtopologypoc.RdmTopologyDispatcher"
 released: false
 cross_mp_edges:
   - parent: "VMWARE VirtualMachine"

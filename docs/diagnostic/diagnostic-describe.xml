@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- UNREGISTERED candidate only. Not the POC descriptor and not included by its build. -->
+<AdapterKind xmlns="http://schemas.vmware.com/vcops/schema"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             key="vcfcf_rdm_discovery_diagnostic" nameKey="1" version="1"
+             xsi:schemaLocation="http://schemas.vmware.com/vcops/schema describeSchema.xsd">
+  <CredentialKinds>
+    <CredentialKind key="rdm_vcenter_readonly" nameKey="2">
+      <CredentialField key="username" nameKey="3" type="string" required="true" dispOrder="1"/>
+      <CredentialField key="password" nameKey="4" type="string" required="true" password="true" dispOrder="2"/>
+    </CredentialKind>
+  </CredentialKinds>
+  <ResourceKinds>
+    <ResourceKind key="vcfcf_rdm_discovery_diagnostic" nameKey="5" type="7"
+                  credentialKind="rdm_vcenter_readonly" isCredentialRequired="true" monitoringInterval="5">
+      <ResourceIdentifier key="vcenter_endpoint" nameKey="6" type="string" required="true" dispOrder="1" identType="2"/>
+      <ResourceIdentifier key="trust_mode" nameKey="7" type="string" required="true" dispOrder="2" identType="2"/>
+      <ResourceIdentifier key="discovery_scope" nameKey="8" type="string" required="true" dispOrder="3" identType="2"/>
+      <ResourceIdentifier key="ops_endpoint" nameKey="9" type="string" required="true" dispOrder="4" identType="2"/>
+      <ResourceIdentifier key="ops_trust_mode" nameKey="10" type="string" required="true" dispOrder="5" identType="2"/>
+      <ResourceIdentifier key="target_vcenter_uuid" nameKey="11" type="string" required="true" dispOrder="6" identType="2"/>
+      <ResourceIdentifier key="target_vm_moid" nameKey="12" type="string" required="true" dispOrder="7" identType="2"/>
+      <ResourceIdentifier key="target_disk_key" nameKey="13" type="string" required="true" dispOrder="8" identType="2"/>
+      <ResourceIdentifier key="diagnostic_enabled" nameKey="14" type="string" required="true" dispOrder="9" identType="2"/>
+      <ResourceIdentifier key="authorize_once" nameKey="15" type="string" required="true" dispOrder="10" identType="2"/>
+    </ResourceKind>
+  </ResourceKinds>
+  <LicenseConfig enabled="false"/>
+</AdapterKind>

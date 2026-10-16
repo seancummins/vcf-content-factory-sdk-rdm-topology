@@ -1,12 +1,16 @@
-# Fixture-only deployment status — VCF Content Factory RDM Topology POC
+# Fixture deployment status — VCF Content Factory RDM Topology POC
 
 This POC is not deployment authorization. It accepts one operator-supplied,
 persisted fixture setting to inspect Java Integration SDK relationship mechanics.
+Missing `execution_mode` preserves this route. See the separately authorized
+[same-kind diagnostic procedure](same-kind-diagnostic.md) for the isolated,
+publication-free route; never retarget an existing fixture account.
 
 ## Runtime fixture setting
 
 The adapter-instance field **Runtime Fixture JSON (lab only)** (`fixture_json`)
-is a required ordinary string setting, not part of account uniqueness or a
+is runtime-required in fixture mode (optional in union descriptor metadata),
+an ordinary string setting, not part of account uniqueness or a
 credential. Supply one object with exactly `foreign_vm` and `mapping`:
 
 ```json
@@ -32,7 +36,9 @@ by name without changing their names, values or flags. SDK key matching ignores
 nonunique values, but that does not justify dropping their entries or coercing
 null/absence to empty: ResourceKey refuses null-valued entries.
 
-Only one VM and one mapping are supported. The parser rejects unknown fields,
+Version-1 supports one VM and one mapping. Optional version-2 supports a bounded
+complete attachment set with qualified CanonicalLun evidence; see
+[version-2 contract](canonical-lun-fixture.md). The parser rejects unknown fields,
 duplicate keys/identifier names, missing flags, invalid/coerced values,
 conflicting scope and malformed JSON. Limits: 32,768 input characters, 4,096
 per string, depth 12 and 512 parsed values. Validate the complete exact key
@@ -51,14 +57,19 @@ failover, but actual UI round-trip/field length, platform initialization and
 failover delivery remain unverified. Stop if the field is absent, truncated,
 rewritten or requires credentials. No node-local file/env fallback exists.
 
-## No endpoint, credentials, or network activity
+## Fixture mode: no endpoints, credentials, or network activity
 
-- It has no vCenter, VCF Operations Suite API, or other endpoint setting.
-- It requests no credentials and opens no network connection.
-- It has no connection-validation operation; Test Connection returns success
-  without remote or fixture validation. Configuration, not that button,
-  validates the fixture; completed collection and API evidence prove emission.
-- It does not collect live inventory, create `CanonicalLun`, or emit metrics.
+- Fixture mode requires no endpoint or credential configuration and opens no
+  network connection. Diagnostic mode instead requires explicit vCenter and
+  Operations endpoints, an Operations-managed read-only vCenter credential,
+  the separate SDK-injected per-instance Operations identity, and strict
+  certificate trust; see the [diagnostic configuration](same-kind-diagnostic.md).
+- Test Connection validates the supplied configuration, including fixture JSON
+  in fixture mode, and rejects invalid configuration. It does not connect,
+  decrypt credentials, arm diagnostics, or prove live discovery or collection.
+  Completed collection and API evidence are needed to establish emission.
+- Fixture mode does not collect live inventory or emit numerical metrics. Version-2 creates
+  CanonicalLun from validated evidence and emits explicit fixture-provenance properties.
 
 ## Deployment prohibition
 
@@ -71,8 +82,15 @@ presentation. That evidence requires a separately authorized test deployment.
 
 Use the commands in the repository `README.md`. They require a locally supplied
 Integration SDK JAR and do not contact VMware or VCF Operations systems.
-The lifecycle tests bypass the SDK constructor using the factory's existing
-test-only allocation idiom because appliance logging dependencies are absent.
-They execute real `onConfigure`, SDK ResourceConfig and collector logic, not
-platform startup. SDK descriptor loading is skipped without log4j-api;
-descriptor DOM assertions and inspected SDK methods remain verified offline.
+Actual SDK lifecycle and descriptor-loading qualification has passed with the
+supplied SDK and eight checksum-verified external platform libraries, without
+logging/platform shims or constructor bypass on the qualified paths. This
+includes original fixture and dispatcher lifecycle routes through both public
+constructors; see the [E4.9.3 qualification](configuration-compatibility-e493.md).
+Older constructor-bypass unit tests remain supplementary only. SDK logger
+appender errors in the offline harness are recorded limitations, not a logging
+qualification pass. These results do not prove live collector startup or
+upgrade recovery, Operations UI serialization, managed credential/trust
+delivery, networking, or failover behavior; those require separately authorized
+lab evidence. Previously recorded E2 live topology observations remain distinct
+from this offline qualification.

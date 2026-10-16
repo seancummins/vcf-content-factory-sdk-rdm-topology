@@ -196,7 +196,7 @@ final class RuntimeFixtureTest {
         return config;
     }
 
-    private static RuntimeFixture current(RdmTopologyPocAdapter adapter) {
+    static RuntimeFixture current(RdmTopologyPocAdapter adapter) {
         try {
             Field field = VcfCfAdapter.class.getDeclaredField("config"); field.setAccessible(true);
             return (RuntimeFixture) field.get(adapter);
@@ -206,7 +206,7 @@ final class RuntimeFixtureTest {
     /** Existing factory test idiom: SDK constructors require appliance log4j-core.
      * Bypass ONLY constructor/platform initialization; execute real onConfigure,
      * real SDK ResourceConfig and collector logic. This is not a runtime boot test. */
-    private static RdmTopologyPocAdapter offlineAdapter() {
+    static RdmTopologyPocAdapter offlineAdapter() {
         try {
             Field unsafeField = Class.forName("sun.misc.Unsafe").getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);

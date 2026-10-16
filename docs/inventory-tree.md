@@ -1,6 +1,6 @@
 # Inventory Tree — VCF Content Factory RDM Topology POC
 
-> Generated from `describe.xml` v0.0.0.6. Do not edit — regenerated on every build.
+> Generated from `describe.xml` v0.0.0.13. Do not edit — regenerated on every build.
 
 ## Traversal Tree
 
@@ -13,6 +13,7 @@
 | Kind | Display Label | Identifying Keys | Parent(s) |
 |------|--------------|-----------------|-----------|
 | `RdmMapping` | RDM Mapping | `vcenter_instance_uuid` *, `vm_instance_uuid` *, `virtual_disk_key` * | — |
+| `CanonicalLun` | Canonical LUN | `identity_token` * | — |
 
 ## Cross-MP Relationships
 

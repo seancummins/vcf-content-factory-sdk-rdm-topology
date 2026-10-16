@@ -9,19 +9,75 @@ import java.util.UUID;
 
 /** One bounded, immutable, fully validated instance setting. Never logs input. */
 final class RuntimeFixture {
+    private static final String ADAPTER_KIND = "vcfcf_rdm_topology_poc";
     final ForeignVmIdentity vm;
     final String vmName;
     final RdmMappingIdentity mapping;
+    final CanonicalLunIdentity lun;
+    final List<RuntimeFixture> attachments;
 
     private RuntimeFixture(ForeignVmIdentity vm, String vmName, RdmMappingIdentity mapping) {
+        this(vm, vmName, mapping, null, null);
+    }
+
+    private RuntimeFixture(ForeignVmIdentity vm, String vmName, RdmMappingIdentity mapping,
+            CanonicalLunIdentity lun, List<RuntimeFixture> attachments) {
         this.vm = vm;
         this.vmName = vmName;
         this.mapping = mapping;
+        this.lun = lun;
+        this.attachments = attachments == null ? List.of(this) : List.copyOf(attachments);
     }
 
     static RuntimeFixture parse(String input) {
         try {
-            Map<String, Object> root = object(new Parser(input).parse(), "foreign_vm", "mapping");
+            Object parsed = new Parser(input).parse();
+            if (parsed instanceof Map && ((Map<?, ?>) parsed).containsKey("schema_version")) {
+                Map<String, Object> root = object(parsed, "schema_version", "attachments");
+                require("2".equals(root.get("schema_version")) && root.get("attachments") instanceof List);
+                List<?> entries = (List<?>) root.get("attachments");
+                require(!entries.isEmpty() && entries.size() <= 8);
+                List<RuntimeFixture> attachments = new ArrayList<>();
+                Map<Object, CanonicalLunIdentity> luns = new LinkedHashMap<>();
+                Set<Object> mappings = new java.util.HashSet<>();
+                Map<String, String> uuidTokens = new LinkedHashMap<>();
+                Map<Object, Object> vmKeys = new LinkedHashMap<>();
+                Map<String, Object> instanceOwners = new LinkedHashMap<>();
+                for (Object entry : entries) {
+                    Map<String, Object> item = object(entry, "foreign_vm", "mapping", "canonical_lun");
+                    RuntimeFixture attachment = parseAttachment(item);
+                    require(mappings.add(attachment.mapping.toResourceKey(ADAPTER_KIND)));
+                    CanonicalLunIdentity lun = CanonicalLunIdentity.parse(item.get("canonical_lun"));
+                    Object key = lun.toResourceKey(ADAPTER_KIND);
+                    CanonicalLunIdentity prior = luns.putIfAbsent(key, lun);
+                    require(prior == null || prior.properties.equals(lun.properties));
+                    String previous = uuidTokens.putIfAbsent(lun.scsiUuid, lun.payload);
+                    require(previous == null || previous.equals(lun.payload));
+                    // Identical scoped VM identity cannot point at conflicting VM instance UUIDs.
+                    Object vmKey = attachment.vm.toResourceKey(attachment.vmName);
+                    Object vmInstance = attachment.mapping.toResourceKey(ADAPTER_KIND)
+                            .getIdentifiers().stream().filter(id -> id.getKey().equals("vm_instance_uuid"))
+                            .findFirst().orElseThrow().getValue();
+                    Object old = vmKeys.putIfAbsent(vmKey, vmInstance);
+                    require(old == null || old.equals(vmInstance));
+                    String vcScope = attachment.mapping.toResourceKey(ADAPTER_KIND).getIdentifiers().stream()
+                            .filter(id -> id.getKey().equals("vcenter_instance_uuid"))
+                            .findFirst().orElseThrow().getValue();
+                    Object previousOwner = instanceOwners.putIfAbsent(vcScope + ":" + vmInstance, vmKey);
+                    require(previousOwner == null || previousOwner.equals(vmKey));
+                    attachments.add(new RuntimeFixture(attachment.vm, attachment.vmName, attachment.mapping,
+                            prior == null ? lun : prior, null));
+                }
+                RuntimeFixture first = attachments.get(0);
+                return new RuntimeFixture(first.vm, first.vmName, first.mapping, first.lun, attachments);
+            }
+            return parseAttachment(object(parsed, "foreign_vm", "mapping"));
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("Invalid runtime fixture configuration");
+        }
+    }
+
+    private static RuntimeFixture parseAttachment(Map<String, Object> root) {
             Map<String, Object> foreign = object(root.get("foreign_vm"),
                     "adapterKindKey", "resourceKindKey", "name", "resourceIdentifiers");
             require("VMWARE".equals(foreign.get("adapterKindKey"))
@@ -61,13 +117,9 @@ final class RuntimeFixture {
             require(disk.matches("[1-9][0-9]{0,9}"));
             require(Long.parseLong(disk) <= Integer.MAX_VALUE);
             return new RuntimeFixture(vm, name, new RdmMappingIdentity(vc, instance, disk));
-        } catch (RuntimeException invalid) {
-            // No payload, field value, parser location, or nested exception escapes.
-            throw new IllegalArgumentException("Invalid runtime fixture configuration");
-        }
     }
 
-    private static Map<String, Object> object(Object value, String... fields) {
+    static Map<String, Object> object(Object value, String... fields) {
         require(value instanceof Map);
         Map<?, ?> source = (Map<?, ?>) value;
         require(source.keySet().equals(Set.of(fields)));
@@ -76,7 +128,7 @@ final class RuntimeFixture {
         return result;
     }
 
-    private static String string(Object value) {
+    static String string(Object value) {
         return string(value, false);
     }
 
@@ -101,7 +153,7 @@ final class RuntimeFixture {
         return result;
     }
 
-    private static void require(boolean condition) {
+    static void require(boolean condition) {
         if (!condition) throw new IllegalArgumentException("Invalid fixture");
     }
 

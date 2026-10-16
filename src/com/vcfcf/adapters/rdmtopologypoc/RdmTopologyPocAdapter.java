@@ -2,6 +2,8 @@ package com.vcfcf.adapters.rdmtopologypoc;
 
 import com.integrien.alive.common.adapter3.AdapterBase;
 import com.integrien.alive.common.adapter3.MetricData;
+import com.integrien.alive.common.adapter3.MetricKey;
+import com.integrien.alive.common.adapter3.ResourceKey;
 import com.integrien.alive.common.adapter3.Relationships;
 import com.integrien.alive.common.adapter3.ResourceStatus;
 import com.integrien.alive.common.adapter3.config.ResourceConfig;
@@ -56,7 +58,15 @@ public final class RdmTopologyPocAdapter extends VcfCfAdapter<RuntimeFixture> {
     @Override
     protected void enumerateResources(ResourceSink sink) {
         RuntimeFixture fixture = requireFixture();
-        sink.accept(new ResourceConfig(fixture.mapping.toResourceKey(ADAPTER_KIND)));
+        java.util.Set<ResourceKey> emitted = new java.util.LinkedHashSet<>();
+        for (RuntimeFixture attachment : fixture.attachments) {
+            ResourceKey mapping = attachment.mapping.toResourceKey(ADAPTER_KIND);
+            if (emitted.add(mapping)) sink.accept(new ResourceConfig(mapping));
+            if (attachment.lun != null) {
+                ResourceKey lun = attachment.lun.toResourceKey(ADAPTER_KIND);
+                if (emitted.add(lun)) sink.accept(new ResourceConfig(lun));
+            }
+        }
     }
 
     @Override
@@ -75,18 +85,28 @@ public final class RdmTopologyPocAdapter extends VcfCfAdapter<RuntimeFixture> {
             @Override
             public void collect(RuntimeFixture configured, ManagedHttpClient http, ResourceConfig resource,
                     List<MetricData> output, AdapterBase adapter) {
-                requireCurrent(configured, resource);
-                // No metrics or properties: this POC proves topology mechanics only.
+                RuntimeFixture attachment = requireCurrent(configured, resource);
+                if (attachment.lun != null && resource.getResourceKey().getResourceKind().equals(CanonicalLunIdentity.KIND)) {
+                    long now = System.currentTimeMillis();
+                    attachment.lun.properties.forEach((key, value) ->
+                            output.add(new MetricData(new MetricKey(true, key), now, value)));
+                }
             }
 
             @Override
             public Relationships collectRelationships(RuntimeFixture configured, ResourceConfig resource) {
                 RuntimeFixture fixture = requireCurrent(configured, resource);
+                if (resource.getResourceKey().getResourceKind().equals(CanonicalLunIdentity.KIND)) return null;
                 // VcfCfAdapter attaches this to the current CollectResult with
                 // addRelationshipsToCurrentCycle(). The parentForeign builder path
                 // invokes Relationships.addRelationships, never setRelationships.
-                return RdmTopologyRelationships.build(ADAPTER_KIND,
+                Relationships relationships = RdmTopologyRelationships.build(ADAPTER_KIND,
                         fixture.vm, fixture.vmName, fixture.mapping);
+                if (fixture.lun != null) relationships.addRelationships(
+                        new com.vcfcf.adapter.stitch.RelationshipBuilder(ADAPTER_KIND)
+                                .parent(fixture.mapping.toResourceKey(ADAPTER_KIND), fixture.lun.toResourceKey(ADAPTER_KIND))
+                                .buildDelta(false));
+                return relationships;
             }
 
             @Override
@@ -104,10 +124,15 @@ public final class RdmTopologyPocAdapter extends VcfCfAdapter<RuntimeFixture> {
 
     private RuntimeFixture requireCurrent(RuntimeFixture configured, ResourceConfig resource) {
         RuntimeFixture current = requireFixture();
-        if (configured != current || resource == null
-                || !current.mapping.toResourceKey(ADAPTER_KIND).equals(resource.getResourceKey())) {
+        if (configured != current || resource == null) {
             throw new IllegalStateException("Collection target does not match the active fixture");
         }
-        return current;
+        for (RuntimeFixture attachment : current.attachments) {
+            if (attachment.mapping.toResourceKey(ADAPTER_KIND).equals(resource.getResourceKey())
+                    || attachment.lun != null && attachment.lun.toResourceKey(ADAPTER_KIND).equals(resource.getResourceKey())) {
+                return attachment;
+            }
+        }
+        throw new IllegalStateException("Collection target does not match the active fixture");
     }
 }

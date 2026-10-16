@@ -1,15 +1,18 @@
 # RDM Topology SDK POC
 
 This is a deterministic-fixture proof of the Java Integration SDK mechanics
-for the initial edge:
+for the topology (version-1 fixtures retain only the initial edge):
 
 ```text
-VMWARE::VirtualMachine -> RdmMapping
+VMWARE::VirtualMachine -> RdmMapping -> CanonicalLun
 ```
 
-It never opens a network connection, reads vCenter, calls the Suite API, emits
-metrics, or creates `CanonicalLun`. The only fixture relation is additive:
-the foreign VM is the parent and the pack-owned `RdmMapping` is the child.
+Default fixture collection never opens a network connection, reads vCenter or
+calls the Suite API. A separately opted-in [read-only diagnostic](docs/same-kind-diagnostic.md)
+can read scoped vCenter/Operations data but emits no inventory, relationships,
+metrics or properties. Version-2 fixtures create a pack-owned
+`CanonicalLun` after full LU-associated NAA5/6 descriptor qualification.
+Both edges are additive; no replacement/removal calls are emitted.
 
 The VM key preserves Suite API identifier names, values, and uniqueness flags.
 It requires `VMEntityObjectID` and `VMEntityVCID` to be marked unique, so a
@@ -20,6 +23,8 @@ adapter-instance setting `fixture_json` (string, nonunique `identType="2"`).
 There is no fallback fixture. Operations supplies this setting with the
 instance configuration; no collector-node files or environment variables are
 read by the adapter. See [configuration and limitations](docs/installing.md).
+Build 7 adds the explicitly versioned [CanonicalLun fixture contract](docs/canonical-lun-fixture.md).
+One instance is the inventory authority; cross-instance deduplication is unproven.
 
 Local validation (the SDK JAR stays outside this repository):
 

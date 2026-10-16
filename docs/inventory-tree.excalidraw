@@ -37,6 +37,41 @@
         "textAlign": "center",
         "verticalAlign": "middle"
       }
+    },
+    {
+      "id": "4617834c",
+      "type": "rectangle",
+      "x": 320,
+      "y": 40,
+      "width": 220,
+      "height": 78,
+      "angle": 0,
+      "strokeColor": "#374151",
+      "backgroundColor": "#ffffff",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "roundness": {
+        "type": 3
+      },
+      "seed": 1645146742,
+      "version": 1,
+      "versionNonce": 3517587419,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1700000000000,
+      "link": null,
+      "locked": false,
+      "label": {
+        "text": "Canonical LUN\n  identity_token *",
+        "fontSize": 13,
+        "fontFamily": 1,
+        "textAlign": "center",
+        "verticalAlign": "middle"
+      }
     }
   ],
   "appState": {
